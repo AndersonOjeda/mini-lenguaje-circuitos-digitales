@@ -10,7 +10,7 @@ else:
 
 def serializedATN():
     return [
-        4,1,12,47,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,1,0,1,0,1,0,4,
+        4,1,14,47,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,1,0,1,0,1,0,4,
         0,14,8,0,11,0,12,0,15,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
         1,1,2,1,2,1,2,5,2,32,8,2,10,2,12,2,35,9,2,1,3,1,3,1,3,1,3,1,3,1,
         3,1,4,1,4,1,4,1,4,1,4,0,0,5,0,2,4,6,8,0,0,45,0,13,1,0,0,0,2,19,1,
@@ -41,7 +41,8 @@ class gramaticaParser ( Parser ):
 
     symbolicNames = [ "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
                       "<INVALID>", "<INVALID>", "<INVALID>", "<INVALID>", 
-                      "<INVALID>", "<INVALID>", "GATETYPE", "ID", "WS" ]
+                      "<INVALID>", "<INVALID>", "GATETYPE", "ID", "LINE_COMMENT", 
+                      "BLOCK_COMMENT", "WS" ]
 
     RULE_program = 0
     RULE_gateDecl = 1
@@ -63,7 +64,9 @@ class gramaticaParser ( Parser ):
     T__8=9
     GATETYPE=10
     ID=11
-    WS=12
+    LINE_COMMENT=12
+    BLOCK_COMMENT=13
+    WS=14
 
     def __init__(self, input:TokenStream, output:TextIO = sys.stdout):
         super().__init__(input, output)

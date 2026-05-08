@@ -9,7 +9,9 @@ T__7=8
 T__8=9
 GATETYPE=10
 ID=11
-WS=12
+LINE_COMMENT=12
+BLOCK_COMMENT=13
+WS=14
 'puerta'=1
 '='=2
 '('=3

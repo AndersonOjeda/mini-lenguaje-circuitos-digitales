@@ -1,2 +1,4 @@
+// Circuito simple con una compuerta AND.
 puerta A = AND(x, y);
+/* Se muestra directamente la senal generada por la puerta. */
 mostrar A;

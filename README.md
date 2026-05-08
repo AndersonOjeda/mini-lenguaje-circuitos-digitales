@@ -107,6 +107,8 @@ inputs : ID (',' ID)* ;
 connection : 'conectar' ID 'a' ID ';' ;
 outputDecl : 'mostrar' ID ';' ;
 ID: [a-zA-Z_][a-zA-Z_0-9]* ;
+LINE_COMMENT: '//' ~[\r\n]* -> skip ;
+BLOCK_COMMENT: '/*' .*? '*/' -> skip ;
 WS: [ \t\r\n]+ -> skip ;
 ```
 
@@ -116,7 +118,9 @@ Entrada en `input.txt`:
 
 ```txt
 puerta A = AND(x, y);
+// Tambien se pueden usar comentarios de linea.
 puerta B = NOT(A);
+/* Y comentarios de bloque. */
 conectar B a salida;
 mostrar salida;
 ```
@@ -235,10 +239,10 @@ La carpeta `docs/` contiene:
 
 ## Autores
 
-Grupo 1.
+Grupo.
 
 Integrantes:
 
-- Completar nombre 1.
-- Completar nombre 2.
-- Completar nombre 3.
+- Anderson Ojeda.
+- Samuel Ibarra.
+- Diego Ceron.

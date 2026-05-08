@@ -30,7 +30,9 @@ def colorear_linea(linea: str, usar_color: bool) -> str:
         return linea
     if linea.startswith("MiniCompilador - compilacion exitosa") or ": OK" in linea:
         return f"{COLOR_VERDE}{linea}{COLOR_RESET}"
-    if linea.startswith("MiniCompilador - errores") or linea.startswith("[semantico]"):
+    if linea.startswith("MiniCompilador - errores") or linea.startswith("MiniCompilador - error"):
+        return f"{COLOR_ROJO}{linea}{COLOR_RESET}"
+    if linea.startswith("[semantico]"):
         return f"{COLOR_ROJO}{linea}{COLOR_RESET}"
     if linea.startswith("[lexico]") or linea.startswith("[sintactico]"):
         return f"{COLOR_ROJO}{linea}{COLOR_RESET}"

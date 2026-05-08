@@ -1,3 +1,8 @@
+====================================
+ MiniCompilador Circuitos Digitales
+ ANTLR4 + Python
+====================================
+
 MiniCompilador - ejecucion automatica de pruebas
 Casos validos encontrados: 10
 Casos con errores encontrados: 10
