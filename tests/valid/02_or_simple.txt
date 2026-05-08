@@ -1,0 +1,2 @@
+puerta A = OR(x, y);
+mostrar A;

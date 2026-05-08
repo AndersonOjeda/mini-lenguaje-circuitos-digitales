@@ -1,0 +1,2 @@
+puerta A = AND(x, z);
+mostrar A;

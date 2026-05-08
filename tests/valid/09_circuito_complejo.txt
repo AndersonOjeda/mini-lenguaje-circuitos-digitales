@@ -1,0 +1,6 @@
+puerta A = AND(x, z);
+puerta B = OR(A, y);
+puerta C = NOT(B);
+puerta D = AND(C, x, z);
+conectar D a salida;
+mostrar salida;

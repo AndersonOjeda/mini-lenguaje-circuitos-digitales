@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Evita dejar el JAR suelto en la raiz; si se versiona, ubicarlo en tools/.
+/antlr-*.jar

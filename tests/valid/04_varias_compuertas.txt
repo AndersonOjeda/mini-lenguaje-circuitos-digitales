@@ -1,0 +1,4 @@
+puerta A = AND(x, y);
+puerta B = NOT(A);
+puerta C = OR(B, z);
+mostrar C;

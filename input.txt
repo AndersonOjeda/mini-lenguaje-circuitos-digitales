@@ -1,0 +1,4 @@
+puerta A = AND(x, y);
+puerta B = NOT(A);
+conectar B a salida;
+mostrar salida;

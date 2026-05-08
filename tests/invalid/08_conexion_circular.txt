@@ -1,0 +1,4 @@
+puerta A = AND(x, y);
+conectar A a B;
+conectar B a A;
+mostrar A;

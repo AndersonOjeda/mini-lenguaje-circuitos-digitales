@@ -1,0 +1,6 @@
+flowchart TD
+    A[A depende de B] --> B[B depende de C]
+    B --> C[C depende de A]
+    C --> A
+    A --> D[DFS detecta nodo repetido en pila]
+    D --> E[Error semantico: conexion circular]

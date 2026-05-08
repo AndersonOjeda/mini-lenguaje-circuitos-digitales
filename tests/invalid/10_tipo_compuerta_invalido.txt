@@ -1,0 +1,2 @@
+puerta A = XOR(x, y);
+mostrar A;

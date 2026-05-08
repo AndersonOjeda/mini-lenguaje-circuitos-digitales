@@ -1,0 +1,3 @@
+puerta A = AND(x, y);
+puerta A = OR(x, z);
+mostrar A;

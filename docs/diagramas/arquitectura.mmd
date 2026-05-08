@@ -1,0 +1,11 @@
+flowchart TD
+    A[input.txt] --> B[ANTLR4 Lexer]
+    B --> C[ANTLR4 Parser]
+    C --> D[ASTBuilder]
+    D --> E[SemanticAnalyzer]
+    E --> F[IRGenerator]
+    F --> G[PythonGenerator]
+    G --> H[output_program.py]
+    E --> I[output.txt]
+    F --> I
+    G --> I
