@@ -2,11 +2,9 @@
 
 ## Objetivo
 
-Esta carpeta contiene la documentacion tecnica del MiniCompilador para circuitos digitales. Los archivos estan organizados para convertirse en un PDF academico universitario.
+Esta carpeta contiene la documentacion tecnica del MiniCompilador para circuitos digitales. Los archivos estan ordenados para construir un PDF academico universitario.
 
-## Orden recomendado para el PDF
-
-Unir los archivos en este orden:
+## Orden recomendado
 
 1. `01_introduccion.md`
 2. `02_arquitectura.md`
@@ -20,18 +18,15 @@ Unir los archivos en este orden:
 
 ## Anexos opcionales
 
-Despues de las referencias se pueden agregar:
+Tambien se pueden incluir:
 
-- `arquitectura.md`: documento previo de arquitectura resumida.
 - `diagramas/arquitectura.mmd`
 - `diagramas/modulos.mmd`
 - `diagramas/ciclo_dfs.mmd`
-- Capturas reales de consola.
-- `doc_proyecto_grupo1.pdf`, si se conserva como version entregable anterior.
+- capturas de consola
+- codigo fuente relevante
 
 ## Comando sugerido con Pandoc
-
-Si Pandoc esta instalado:
 
 ```bash
 pandoc \
@@ -47,13 +42,9 @@ pandoc \
   -o docs/doc_proyecto_grupo1.pdf
 ```
 
-## Recomendaciones para entrega
+## Verificacion antes de entregar
 
-- Verificar que el PDF final conserve los bloques de codigo.
-- Exportar los diagramas Mermaid como imagenes si el conversor no soporta Mermaid directamente.
-- Completar portada institucional si la universidad lo exige.
-- Incluir autores: Anderson Ojeda, Samuel Ibarra y Diego Ceron.
-- Ejecutar pruebas antes de la defensa:
+Ejecutar:
 
 ```bash
 python main.py --run-tests
@@ -63,5 +54,17 @@ Resultado esperado:
 
 ```txt
 Resumen: 20/20 casos correctos.
+```
+
+## Archivos que no deben subirse
+
+No incluir en el commit:
+
+```txt
+*.zip
+*.code-workspace
+tools/*.jar
+__pycache__/
+*.pyc
 ```
 
