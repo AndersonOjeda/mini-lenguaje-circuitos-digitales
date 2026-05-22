@@ -3,29 +3,32 @@
  ANTLR4 + Python
 ====================================
 
-MiniCompilador - ejecucion automatica de pruebas
-Casos validos encontrados: 10
-Casos con errores encontrados: 10
+MiniCompilador - compilacion exitosa
 
-[OK] valido   01_and_simple.txt
-[OK] valido   02_or_simple.txt
-[OK] valido   03_not_simple.txt
-[OK] valido   04_varias_compuertas.txt
-[OK] valido   05_mostrar_puerta_directa.txt
-[OK] valido   06_conexion_salida.txt
-[OK] valido   07_usa_z_externa.txt
-[OK] valido   08_varias_salidas.txt
-[OK] valido   09_circuito_complejo.txt
-[OK] valido   10_minimo_valido.txt
-[OK] error    01_entrada_no_declarada.txt: [semantico] linea 1, columna 0: La senal 'q' se usa como entrada de 'A' antes de declararse. Usa una puerta previa, una conexion previa o una entrada externa permitida: x, y, z.
-[OK] error    02_not_dos_entradas.txt: [semantico] linea 1, columna 0: La compuerta NOT 'A' debe recibir exactamente una entrada; recibio 2.
-[OK] error    03_and_una_entrada.txt: [semantico] linea 1, columna 0: La compuerta AND 'A' debe recibir minimo dos entradas; recibio 1.
-[OK] error    04_or_una_entrada.txt: [semantico] linea 1, columna 0: La compuerta OR 'A' debe recibir minimo dos entradas; recibio 1.
-[OK] error    05_puerta_duplicada.txt: [semantico] linea 2, columna 0: La puerta 'A' ya fue declarada previamente.
-[OK] error    06_conectar_origen_inexistente.txt: [semantico] linea 1, columna 0: No se puede conectar desde 'q' porque esa senal no existe todavia.
-[OK] error    07_mostrar_inexistente.txt: [semantico] linea 1, columna 0: No se puede mostrar 'salida' porque esa senal no existe.
-[OK] error    08_conexion_circular.txt: [semantico] linea 0, columna 0: Conexion circular detectada: A -> B -> A.
-[OK] error    09_falta_punto_y_coma.txt: [sintactico] linea 2, columna 0: Error sintactico cerca de 'mostrar'. Detalle de ANTLR: missing ';' at 'mostrar'
-[OK] error    10_tipo_compuerta_invalido.txt: [sintactico] linea 1, columna 11: Tipo de compuerta invalido 'XOR'. Usa AND, OR o NOT.
+[1/5] Analisis lexico: OK
+[2/5] Analisis sintactico: OK
+[3/5] Analisis semantico: OK
+[4/5] Generacion IR/TAC: OK
+[5/5] Traduccion Python: OK
 
-Resumen: 20/20 casos correctos.
+=== IR/TAC ===
+A = AND x y
+B = NOT A
+salida = B
+PRINT salida
+
+=== Python generado ===
+# Codigo Python generado por MiniCompilador
+# Entradas externas usadas por el circuito.
+x, y = True, False
+# Compuerta AND: A es verdadera si todas sus entradas son verdaderas.
+A = x and y
+# Compuerta NOT: B invierte el valor de A.
+B = not A
+# Conexion: salida recibe el valor de B.
+salida = B
+# Salida: se muestra el valor final de salida.
+print(salida)
+
+=== Salida de ejecucion ===
+True

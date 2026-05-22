@@ -1,4 +1,11 @@
+// Declara la compuerta A como un AND entre las entradas externas x e y.
 puerta A = AND(x, y);
+
+// Declara la compuerta B como la negacion del resultado de A.
 puerta B = NOT(A);
+
+// Conecta el resultado de B hacia una senal llamada salida.
 conectar B a salida;
+
+// Muestra en consola el valor final de salida.
 mostrar salida;
