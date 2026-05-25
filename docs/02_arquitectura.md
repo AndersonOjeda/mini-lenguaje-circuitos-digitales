@@ -68,7 +68,7 @@ Implementa un visitor que recorre el parse tree generado por ANTLR4 y produce no
 
 ### `semantic_analyzer/`
 
-Contiene `SemanticAnalyzer`, encargado de validar reglas del dominio:
+Contiene `SemanticAnalyzer` y `SymbolTable`. El analizador valida reglas del dominio y delega el registro de simbolos, entradas externas usadas y dependencias a la tabla:
 
 - senales declaradas
 - duplicados
@@ -152,12 +152,13 @@ PRINT salida
 
 ## Tabla de simbolos
 
-El proyecto no tiene una clase llamada literalmente `TablaSimbolos`, pero `SemanticAnalyzer` cumple esa funcion mediante:
+La tabla de simbolos esta implementada como `SymbolTable` en `semantic_analyzer/symbol_table.py`.
+`SemanticAnalyzer` la consulta y actualiza mientras recorre el AST.
 
 | Estructura | Tipo | Funcion |
 |---|---|---|
-| `compuertas` | `dict[str, GateDecl]` | Guarda puertas declaradas. |
-| `senales_conocidas` | `set[str]` | Registra senales disponibles. |
-| `senales_externas_usadas` | `set[str]` | Registra entradas externas usadas. |
-| `dependencias` | `dict[str, list[str]]` | Representa dependencias para DFS. |
+| `_symbols` | `dict[str, Symbol]` | Guarda todos los simbolos conocidos. |
+| `_gates` | `dict[str, GateDecl]` | Guarda puertas declaradas. |
+| `_used_external_signals` | `set[str]` | Registra entradas externas usadas. |
+| `_dependencies` | `dict[str, list[str]]` | Representa dependencias para DFS. |
 

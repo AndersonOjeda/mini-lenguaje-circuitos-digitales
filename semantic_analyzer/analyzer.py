@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from ast_nodes import Connection, GateDecl, OutputDecl, Program
 # Tipos de error usados para reportar problemas semanticos.
 from compiler_errors import CompilerMessage, SemanticError
+from semantic_analyzer.symbol_table import Symbol, SymbolTable
 
 
 # Entradas externas permitidas por decision de diseno del proyecto.
@@ -22,6 +23,8 @@ DEFAULT_EXTERNAL_VALUES = {
 class SemanticContext:
     """Resumen de informacion valida que otras fases necesitan despues del analisis."""
 
+    # Snapshot de la tabla de simbolos despues del analisis.
+    simbolos: dict[str, Symbol]
     # Entradas externas admitidas por el lenguaje.
     senales_externas: set[str]
     # Entradas externas que el programa realmente uso.
@@ -38,23 +41,12 @@ class SemanticAnalyzer:
     """Valida reglas semanticas del lenguaje de circuitos digitales."""
 
     def __init__(self, senales_externas: set[str] | None = None):
-        # Si no se pasan entradas externas personalizadas, se usan x, y, z.
-        self.senales_externas = set(senales_externas or DEFAULT_EXTERNAL_VALUES.keys())
-
         # Lista acumulada de errores; se reportan todos juntos al final.
         self.errores: list[CompilerMessage] = []
 
-        # Diccionario para detectar compuertas duplicadas y consultar declaraciones.
-        self.compuertas: dict[str, GateDecl] = {}
-
-        # Al inicio solo existen las senales externas.
-        self.senales_conocidas: set[str] = set(self.senales_externas)
-
-        # Se registra que entradas externas se usaron para generar solo las necesarias.
-        self.senales_externas_usadas: set[str] = set()
-
-        # Cada senal externa empieza sin dependencias.
-        self.dependencias: dict[str, list[str]] = {senal: [] for senal in self.senales_externas}
+        # La tabla de simbolos concentra nombres, externas usadas y dependencias.
+        externas = senales_externas or set(DEFAULT_EXTERNAL_VALUES)
+        self.tabla_simbolos = SymbolTable(externas)
 
     def analyze(self, program: Program) -> SemanticContext:
         """Recorre el AST, valida cada instruccion y devuelve contexto semantico."""
@@ -75,26 +67,23 @@ class SemanticAnalyzer:
             raise SemanticError(self.errores)
 
         # Si no hubo errores, se entrega una copia segura del estado semantico.
-        return SemanticContext(
-            senales_externas=set(self.senales_externas),
-            senales_externas_usadas=set(self.senales_externas_usadas),
-            compuertas=dict(self.compuertas),
-            senales_conocidas=set(self.senales_conocidas),
-            dependencias={clave: list(valor) for clave, valor in self.dependencias.items()},
-        )
+        return self._crear_contexto()
 
     def _validar_puerta(self, puerta: GateDecl) -> None:
         """Valida una declaracion de compuerta y registra sus dependencias."""
         # No se permite declarar dos compuertas con el mismo nombre.
-        if puerta.nombre in self.compuertas:
+        nombre_valido = True
+        if self.tabla_simbolos.has_gate(puerta.nombre):
             self._error(puerta.linea, f"La puerta '{puerta.nombre}' ya fue declarada previamente.")
+            nombre_valido = False
 
         # Tampoco se permite usar x, y o z como nombre de compuerta.
-        elif puerta.nombre in self.senales_externas:
+        elif self.tabla_simbolos.is_external(puerta.nombre):
             self._error(
                 puerta.linea,
                 f"La puerta '{puerta.nombre}' usa el nombre de una entrada externa reservada.",
             )
+            nombre_valido = False
 
         # NOT representa negacion, por eso exactamente una entrada.
         if puerta.tipo == "NOT" and len(puerta.entradas) != 1:
@@ -112,7 +101,7 @@ class SemanticAnalyzer:
 
         # Cada entrada debe existir antes de usarse.
         for entrada in puerta.entradas:
-            if entrada not in self.senales_conocidas:
+            if not self.tabla_simbolos.contains(entrada):
                 self._error(
                     puerta.linea,
                     f"La senal '{entrada}' se usa como entrada de '{puerta.nombre}' antes de declararse. "
@@ -120,52 +109,47 @@ class SemanticAnalyzer:
                 )
 
             # Si la entrada existe y es externa, se marca para generar su valor en Python.
-            elif entrada in self.senales_externas:
-                self.senales_externas_usadas.add(entrada)
+            else:
+                self.tabla_simbolos.mark_external_used(entrada)
 
         # Si el nombre es valido, la nueva compuerta pasa a ser una senal conocida.
-        if puerta.nombre not in self.compuertas and puerta.nombre not in self.senales_externas:
-            self.compuertas[puerta.nombre] = puerta
-            self.senales_conocidas.add(puerta.nombre)
-
-        # Se asegura que la compuerta aparezca como nodo del grafo de dependencias.
-        self.dependencias.setdefault(puerta.nombre, [])
+        if nombre_valido:
+            self.tabla_simbolos.define_gate(puerta)
+        else:
+            self.tabla_simbolos.ensure_dependency_node(puerta.nombre)
 
         # Cada entrada crea una arista: puerta depende de entrada.
         for entrada in puerta.entradas:
-            self._agregar_dependencia(puerta.nombre, entrada)
+            self.tabla_simbolos.add_dependency(puerta.nombre, entrada)
 
     def _validar_conexion(self, conexion: Connection) -> None:
         """Valida una conexion y registra que destino depende de origen."""
         # El origen debe existir; no se puede conectar desde una senal desconocida.
-        if conexion.origen not in self.senales_conocidas:
+        if not self.tabla_simbolos.contains(conexion.origen):
             self._error(
                 conexion.linea,
                 f"No se puede conectar desde '{conexion.origen}' porque esa senal no existe todavia.",
             )
 
         # Si se conecta directamente una entrada externa, tambien debe generarse en Python.
-        elif conexion.origen in self.senales_externas:
-            self.senales_externas_usadas.add(conexion.origen)
+        else:
+            self.tabla_simbolos.mark_external_used(conexion.origen)
 
         # El destino se considera una nueva senal conocida despues de la conexion.
-        self.senales_conocidas.add(conexion.destino)
-
-        # El destino debe existir como nodo del grafo.
-        self.dependencias.setdefault(conexion.destino, [])
+        self.tabla_simbolos.define_connection_target(conexion)
 
         # Se registra que destino depende del origen.
-        self._agregar_dependencia(conexion.destino, conexion.origen)
+        self.tabla_simbolos.add_dependency(conexion.destino, conexion.origen)
 
     def _validar_salida(self, salida: OutputDecl) -> None:
         """Valida que la senal solicitada por mostrar exista."""
         # No se puede imprimir una senal que nunca fue declarada ni conectada.
-        if salida.senal not in self.senales_conocidas:
+        if not self.tabla_simbolos.contains(salida.senal):
             self._error(salida.linea, f"No se puede mostrar '{salida.senal}' porque esa senal no existe.")
 
         # Mostrar una entrada externa obliga a declarar su valor en el Python generado.
-        elif salida.senal in self.senales_externas:
-            self.senales_externas_usadas.add(salida.senal)
+        else:
+            self.tabla_simbolos.mark_external_used(salida.senal)
 
     def _detectar_ciclos(self) -> None:
         """Detecta dependencias circulares con busqueda en profundidad."""
@@ -177,6 +161,9 @@ class SemanticAnalyzer:
 
         # reportados evita mostrar el mismo ciclo varias veces.
         reportados: set[tuple[str, ...]] = set()
+
+        # Se trabaja con un snapshot para que el DFS no dependa de mutaciones externas.
+        dependencias = self.tabla_simbolos.dependencies
 
         def dfs(senal: str) -> None:
             """Explora dependencias de una senal y reporta si vuelve a una senal activa."""
@@ -199,9 +186,9 @@ class SemanticAnalyzer:
             pila.append(senal)
 
             # Se exploran sus dependencias directas.
-            for dependencia in self.dependencias.get(senal, []):
+            for dependencia in dependencias.get(senal, []):
                 # Solo se hace DFS sobre senales que tambien son nodos del grafo.
-                if dependencia in self.dependencias:
+                if dependencia in dependencias:
                     dfs(dependencia)
 
             # Al terminar, la senal sale del camino activo.
@@ -211,17 +198,19 @@ class SemanticAnalyzer:
             visitados.add(senal)
 
         # Se revisan todas las senales registradas en el grafo de dependencias.
-        for senal in sorted(self.dependencias):
+        for senal in sorted(dependencias):
             dfs(senal)
 
-    def _agregar_dependencia(self, destino: str, origen: str) -> None:
-        """Agrega una dependencia sin duplicarla."""
-        # Obtiene la lista de dependencias del destino o la crea si no existe.
-        dependencias = self.dependencias.setdefault(destino, [])
-
-        # Evita aristas repetidas, lo que simplifica el DFS y el reporte.
-        if origen not in dependencias:
-            dependencias.append(origen)
+    def _crear_contexto(self) -> SemanticContext:
+        """Construye un snapshot inmutable del resultado semantico."""
+        return SemanticContext(
+            simbolos=self.tabla_simbolos.symbols,
+            senales_externas=self.tabla_simbolos.external_signals,
+            senales_externas_usadas=self.tabla_simbolos.used_external_signals,
+            compuertas=self.tabla_simbolos.gates,
+            senales_conocidas=self.tabla_simbolos.known_signals,
+            dependencias=self.tabla_simbolos.dependencies,
+        )
 
     def _error(self, linea: int, mensaje: str) -> None:
         """Registra un error semantico en la lista acumulada."""
@@ -229,4 +218,4 @@ class SemanticAnalyzer:
 
     def _externas_texto(self) -> str:
         """Devuelve las entradas externas como texto para los mensajes de ayuda."""
-        return ", ".join(sorted(self.senales_externas))
+        return ", ".join(sorted(self.tabla_simbolos.external_signals))

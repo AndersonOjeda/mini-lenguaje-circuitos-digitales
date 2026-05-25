@@ -118,3 +118,56 @@ def parse_source(codigo_fuente: str):
 
     # Si todo esta bien, el visitor propio convierte el parse tree en AST.
     return ASTBuilder().visit(tree)
+
+
+def describir_tokens(codigo_fuente: str) -> list[str]:
+    """Devuelve una descripcion legible de los tokens que produce el lexer."""
+    gramaticaLexer, _, _ = _load_generated_classes()
+
+    input_stream = InputStream(codigo_fuente)
+    lexer = gramaticaLexer(input_stream)
+    errores: list[CompilerMessage] = []
+    lexer.removeErrorListeners()
+    lexer.addErrorListener(CollectingErrorListener("lexico", errores))
+
+    token_stream = CommonTokenStream(lexer)
+    token_stream.fill()
+
+    descripciones: list[str] = []
+    for token in token_stream.tokens:
+        if token.type == -1:
+            continue
+
+        descripciones.append(
+            f"linea {token.line}, columna {token.column}: {token.text!r} -> {_nombre_token(token.text, token.type, gramaticaLexer)}"
+        )
+
+    return descripciones
+
+
+def _nombre_token(texto: str, tipo: int, lexer_class) -> str:
+    """Convierte el tipo numerico de ANTLR en una etiqueta facil de explicar."""
+    palabras_reservadas = {
+        "puerta": "palabra reservada PUERTA",
+        "conectar": "palabra reservada CONECTAR",
+        "a": "palabra reservada A",
+        "mostrar": "palabra reservada MOSTRAR",
+    }
+    simbolos = {
+        "=": "simbolo IGUAL",
+        "(": "simbolo PARENTESIS_ABRE",
+        ")": "simbolo PARENTESIS_CIERRA",
+        ";": "simbolo PUNTO_Y_COMA",
+        ",": "simbolo COMA",
+    }
+
+    if texto in palabras_reservadas:
+        return palabras_reservadas[texto]
+    if texto in simbolos:
+        return simbolos[texto]
+    if tipo == lexer_class.GATETYPE:
+        return "GATETYPE tipo de compuerta"
+    if tipo == lexer_class.ID:
+        return "ID identificador de senal o puerta"
+
+    return f"token tipo {tipo}"

@@ -6,7 +6,8 @@ import io
 from dataclasses import dataclass
 
 # Parser/lexer + constructor de AST.
-from antlr_driver import parse_source
+from antlr_driver import describir_tokens, parse_source
+from ast_nodes import Connection, GateDecl, OutputDecl, Program
 # Generadores de codigo intermedio y codigo Python final.
 from codegen import IRGenerator, PythonGenerator
 # Analizador semantico y valores por defecto de entradas externas.
@@ -36,6 +37,9 @@ class CompilationResult:
 
 def compilar_codigo(codigo_fuente: str, ejecutar: bool = True) -> CompilationResult:
     """Ejecuta las cinco fases: parseo, semantica, IR, Python y ejecucion opcional."""
+    # Se obtiene una explicacion de los tokens para mostrar que hizo la capa lexica.
+    tokens_descritos = describir_tokens(codigo_fuente)
+
     # Fase 1 y 2: ANTLR hace analisis lexico/sintactico y luego se construye el AST.
     ast = parse_source(codigo_fuente)
 
@@ -55,7 +59,7 @@ def compilar_codigo(codigo_fuente: str, ejecutar: bool = True) -> CompilationRes
     ir_text = "\n".join(str(instruccion) for instruccion in ir)
 
     # Se arma un reporte unico con fases, IR, Python generado y salida.
-    log = construir_log_exito(ir_text, python_code, execution_output)
+    log = construir_log_exito(codigo_fuente, tokens_descritos, ast, contexto, ir_text, python_code, execution_output)
     return CompilationResult(ir_text, python_code, execution_output, log)
 
 
@@ -73,7 +77,15 @@ def ejecutar_python_generado(python_code: str) -> str:
     return salida.getvalue()
 
 
-def construir_log_exito(ir_text: str, python_code: str, execution_output: str) -> str:
+def construir_log_exito(
+    codigo_fuente: str,
+    tokens_descritos: list[str],
+    ast: Program,
+    contexto,
+    ir_text: str,
+    python_code: str,
+    execution_output: str,
+) -> str:
     """Construye el texto que resume una compilacion correcta."""
     # La lista permite mantener el orden del reporte sin concatenaciones largas.
     partes = [
@@ -87,15 +99,110 @@ def construir_log_exito(ir_text: str, python_code: str, execution_output: str) -
         "[4/5] Generacion IR/TAC: OK",
         "[5/5] Traduccion Python: OK",
         "",
-        "=== IR/TAC ===",
+        "=== Input ejecutado ===",
+        codigo_fuente.rstrip() or "(sin codigo fuente)",
+        "",
+        "=== Capa 1: analisis lexico ===",
+        "Que hace: separa el texto de entrada en tokens que el parser puede entender.",
+        "Resultado:",
+        *(_prefijar_lineas(tokens_descritos) or ["- (sin tokens)"]),
+        "",
+        "=== Capa 2: analisis sintactico y AST ===",
+        "Que hace: verifica la estructura del programa y la convierte en nodos internos.",
+        "Resultado:",
+        *_prefijar_lineas(_describir_ast(ast)),
+        "",
+        "=== Capa 3: analisis semantico ===",
+        "Que hace: valida que las senales, compuertas, conexiones y salidas tengan sentido.",
+        "Resultado:",
+        *_prefijar_lineas(_describir_contexto_semantico(contexto)),
+        "",
+        "=== Capa 4: representacion intermedia IR/TAC ===",
+        "Que hace: transforma el AST validado en instrucciones simples e independientes de Python.",
+        "Resultado:",
         ir_text or "(sin instrucciones)",
         "",
-        "=== Python generado ===",
+        "=== Capa 5: traduccion a Python ===",
+        "Que hace: convierte el IR/TAC en codigo Python ejecutable.",
+        "Resultado:",
         python_code.rstrip(),
         "",
-        "=== Salida de ejecucion ===",
+        "=== Capa 6: ejecucion del Python generado ===",
+        "Que hace: ejecuta el codigo generado y captura lo que imprime.",
+        "Resultado:",
         execution_output.rstrip() or "(sin salida)",
     ]
 
     # Se agrega salto final para que output.txt sea comodo de leer.
     return "\n".join(partes) + "\n"
+
+
+def _prefijar_lineas(lineas: list[str]) -> list[str]:
+    """Agrega guion a lineas descriptivas para que el reporte sea mas legible."""
+    return [f"- {linea}" for linea in lineas]
+
+
+def _describir_ast(program: Program) -> list[str]:
+    """Explica los nodos del AST producidos por la capa sintactica."""
+    descripciones: list[str] = []
+
+    for instruccion in program.instrucciones:
+        if isinstance(instruccion, GateDecl):
+            entradas = ", ".join(instruccion.entradas)
+            descripciones.append(
+                f"linea {instruccion.linea}: GateDecl -> puerta {instruccion.nombre} de tipo {instruccion.tipo} con entradas {entradas}"
+            )
+        elif isinstance(instruccion, Connection):
+            descripciones.append(
+                f"linea {instruccion.linea}: Connection -> conectar {instruccion.origen} a {instruccion.destino}"
+            )
+        elif isinstance(instruccion, OutputDecl):
+            descripciones.append(f"linea {instruccion.linea}: OutputDecl -> mostrar {instruccion.senal}")
+
+    return descripciones or ["No se generaron nodos AST."]
+
+
+def _describir_contexto_semantico(contexto) -> list[str]:
+    """Resume la informacion que dejo lista el analisis semantico."""
+    simbolos = [
+        _describir_simbolo(nombre, simbolo)
+        for nombre, simbolo in sorted(contexto.simbolos.items())
+    ]
+    compuertas = [
+        f"{nombre}({puerta.tipo})"
+        for nombre, puerta in sorted(contexto.compuertas.items())
+    ]
+    dependencias = [
+        f"{senal} depende de {', '.join(origenes)}"
+        for senal, origenes in sorted(contexto.dependencias.items())
+        if origenes
+    ]
+
+    lineas = [
+        "Reglas validadas: declaracion antes de uso, entradas correctas por compuerta, duplicados, salidas existentes y ciclos.",
+        "Tabla de simbolos: " + _unir_o_vacio(simbolos),
+        "Entradas externas permitidas: " + _unir_o_vacio(sorted(contexto.senales_externas)),
+        "Entradas externas usadas: " + _unir_o_vacio(sorted(contexto.senales_externas_usadas)),
+        "Compuertas registradas: " + _unir_o_vacio(compuertas),
+        "Senales conocidas: " + _unir_o_vacio(sorted(contexto.senales_conocidas)),
+    ]
+
+    if dependencias:
+        lineas.append("Dependencias validadas: " + "; ".join(dependencias))
+    else:
+        lineas.append("Dependencias validadas: ninguna")
+
+    return lineas
+
+
+def _describir_simbolo(nombre: str, simbolo) -> str:
+    """Convierte una entrada de la tabla de simbolos en texto compacto."""
+    if simbolo.line:
+        return f"{nombre}({simbolo.kind.value}, linea {simbolo.line})"
+
+    return f"{nombre}({simbolo.kind.value})"
+
+
+def _unir_o_vacio(valores: list[str]) -> str:
+    """Une listas para el reporte y evita dejar campos vacios."""
+    return ", ".join(valores) if valores else "(ninguna)"

@@ -77,7 +77,8 @@ mini-lenguaje-circuitos-digitales/
 ├── compiler_pipeline.py
 ├── semantic_analyzer/
 │   ├── __init__.py
-│   └── analyzer.py
+│   ├── analyzer.py
+│   └── symbol_table.py
 ├── codegen/
 │   ├── __init__.py
 │   ├── ir_generator.py

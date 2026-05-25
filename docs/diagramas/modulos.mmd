@@ -5,6 +5,7 @@ flowchart LR
     antlr --> ast[ast_builder.py]
     ast --> nodes[ast_nodes.py]
     pipeline --> sem[semantic_analyzer/analyzer.py]
+    sem --> symbols[semantic_analyzer/symbol_table.py]
     pipeline --> ir[codegen/ir_generator.py]
     pipeline --> py[codegen/python_generator.py]
     tests[tests/run_tests.py] --> pipeline

@@ -6,9 +6,10 @@ El analisis semantico esta implementado en:
 
 ```txt
 semantic_analyzer/analyzer.py
+semantic_analyzer/symbol_table.py
 ```
 
-La clase principal es `SemanticAnalyzer`.
+La clase principal es `SemanticAnalyzer`, que valida reglas del lenguaje usando una `SymbolTable`.
 
 ## Entradas externas
 
@@ -22,25 +23,26 @@ DEFAULT_EXTERNAL_VALUES = {
 }
 ```
 
-Estas senales se agregan al conjunto `senales_conocidas` al iniciar el analisis.
+Estas senales se registran como simbolos externos al iniciar el analisis.
 
 ## Tabla de simbolos
 
-La tabla de simbolos esta implementada mediante estructuras internas:
+La tabla de simbolos esta implementada en `semantic_analyzer/symbol_table.py`.
+Cada entrada se representa con `Symbol`, que guarda nombre, tipo, linea y declaracion asociada.
 
 | Estructura | Tipo | Funcion |
 |---|---|---|
-| `compuertas` | `dict[str, GateDecl]` | Puertas declaradas. |
-| `senales_conocidas` | `set[str]` | Senales que pueden usarse. |
-| `senales_externas_usadas` | `set[str]` | Entradas externas usadas en el programa. |
-| `dependencias` | `dict[str, list[str]]` | Grafo de dependencias. |
-| `errores` | `list[CompilerMessage]` | Errores acumulados. |
+| `SymbolTable._symbols` | `dict[str, Symbol]` | Todos los simbolos conocidos. |
+| `SymbolTable._gates` | `dict[str, GateDecl]` | Puertas declaradas para detectar duplicados. |
+| `SymbolTable._used_external_signals` | `set[str]` | Entradas externas usadas en el programa. |
+| `SymbolTable._dependencies` | `dict[str, list[str]]` | Grafo de dependencias para detectar ciclos. |
+| `SemanticAnalyzer.errores` | `list[CompilerMessage]` | Errores acumulados durante la validacion. |
 
 ## Reglas implementadas
 
 ### Senales no declaradas
 
-Si una senal no esta en `senales_conocidas`, se reporta error:
+Si una senal no esta registrada en la `SymbolTable`, se reporta error:
 
 ```txt
 [semantico] linea 1, columna 0: La senal 'q' se usa como entrada de 'A' antes de declararse. Usa una puerta previa, una conexion previa o una entrada externa permitida: x, y, z.
@@ -48,7 +50,7 @@ Si una senal no esta en `senales_conocidas`, se reporta error:
 
 ### Puertas duplicadas
 
-Si el nombre de puerta ya existe en `compuertas`, se reporta:
+Si el nombre de puerta ya existe como compuerta en la `SymbolTable`, se reporta:
 
 ```txt
 [semantico] linea 2, columna 0: La puerta 'A' ya fue declarada previamente.
@@ -92,7 +94,7 @@ Si se intenta declarar una puerta llamada `x`, `y` o `z`, el analizador genera u
 
 ### Conexiones circulares
 
-El analizador usa DFS sobre `dependencias`. Si una senal aparece de nuevo en la pila de recursion, existe un ciclo.
+El analizador usa DFS sobre las dependencias guardadas en la `SymbolTable`. Si una senal aparece de nuevo en la pila de recursion, existe un ciclo.
 
 Ejemplo:
 
@@ -120,7 +122,7 @@ flowchart TD
     C --> F[Validar puerta]
     D --> G[Validar conexion]
     E --> H[Validar salida]
-    F --> I[Actualizar simbolos y dependencias]
+    F --> I[Consultar y actualizar SymbolTable]
     G --> I
     H --> I
     I --> J[DFS para ciclos]

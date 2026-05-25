@@ -1,0 +1,433 @@
+FUNCIONAMIENTO DEL PROYECTO
+MiniCompilador para circuitos digitales
+
+Este proyecto es un mini compilador hecho en Python con ANTLR4. Su objetivo es
+leer un lenguaje pequeno para describir circuitos digitales, validar que las
+instrucciones esten bien escritas y tengan sentido, generar una representacion
+intermedia IR/TAC y finalmente traducir el circuito a Python ejecutable.
+
+El lenguaje permite declarar compuertas logicas AND, OR y NOT, conectar senales
+y mostrar resultados.
+
+
+1. ARCHIVO DE ENTRADA
+
+El programa que se quiere compilar se escribe en el archivo:
+
+input.txt
+
+Ejemplo:
+
+puerta A = AND(x, y);
+puerta B = NOT(A);
+conectar B a salida;
+mostrar salida;
+
+En este ejemplo:
+
+- A es una compuerta AND que usa las entradas externas x e y.
+- B es una compuerta NOT que invierte el resultado de A.
+- La senal B se conecta a una nueva senal llamada salida.
+- Finalmente se muestra el valor de salida.
+
+Las entradas externas permitidas por el compilador son:
+
+x, y, z
+
+Por defecto, al generar Python, se usan estos valores:
+
+x = True
+y = False
+z = True
+
+
+2. EJECUCION DEL PROYECTO
+
+Para ejecutar el compilador se usa:
+
+python main.py
+
+Ese comando lee input.txt, ejecuta todas las fases del compilador y genera dos
+archivos principales:
+
+output.txt
+output_program.py
+
+output.txt contiene el reporte completo de la compilacion.
+output_program.py contiene el codigo Python generado a partir del circuito.
+
+Para ejecutar directamente el Python generado se usa:
+
+python output_program.py
+
+Para correr las pruebas automaticas del proyecto se usa:
+
+python main.py --run-tests
+
+
+3. FLUJO GENERAL DEL COMPILADOR
+
+El compilador funciona por fases. Cada fase recibe el resultado de la fase
+anterior y prepara la informacion para la siguiente.
+
+El flujo es:
+
+input.txt
+   |
+   v
+Analisis lexico
+   |
+   v
+Analisis sintactico
+   |
+   v
+Construccion del AST
+   |
+   v
+Analisis semantico
+   |
+   v
+Generacion de IR/TAC
+   |
+   v
+Generacion de Python
+   |
+   v
+Ejecucion del programa generado
+
+
+4. ANALISIS LEXICO
+
+El analisis lexico es la primera revision que realiza el compilador.
+
+Su funcion es dividir el texto escrito por el usuario en partes reconocibles,
+llamadas tokens.
+
+Por ejemplo, esta linea:
+
+puerta A = AND(x, y);
+
+se reconoce como una secuencia de elementos:
+
+puerta
+A
+=
+AND
+(
+x
+,
+y
+)
+;
+
+La gramatica define tokens como:
+
+- ID: nombres de puertas o senales.
+- GATETYPE: tipos de compuerta AND, OR o NOT.
+- Comentarios de linea y bloque.
+- Espacios y saltos de linea, que son ignorados.
+
+Si aparece un caracter que el lenguaje no reconoce, se produce un error lexico.
+
+
+5. ANALISIS SINTACTICO
+
+Despues del analisis lexico, el parser revisa si los tokens estan organizados
+segun las reglas del lenguaje.
+
+Las instrucciones validas principales son:
+
+Declarar una compuerta:
+
+puerta A = AND(x, y);
+
+Conectar una senal:
+
+conectar B a salida;
+
+Mostrar una senal:
+
+mostrar salida;
+
+La gramatica exige que las instrucciones tengan los simbolos correctos, por
+ejemplo el signo igual, los parentesis, las comas y el punto y coma.
+
+Esta instruccion es valida:
+
+puerta A = AND(x, y);
+
+Esta instruccion no es valida:
+
+puerta A AND(x, y)
+
+porque falta el signo igual y el punto y coma.
+
+Si la estructura esta mal escrita, el compilador reporta un error sintactico.
+
+
+6. CONSTRUCCION DEL AST
+
+Una vez que ANTLR confirma que la estructura es correcta, el proyecto construye
+un AST.
+
+AST significa Arbol de Sintaxis Abstracta. Es una representacion interna del
+programa, mas facil de manejar desde Python.
+
+Por ejemplo, esta instruccion:
+
+puerta A = AND(x, y);
+
+se convierte internamente en un nodo que representa:
+
+- nombre de la puerta: A
+- tipo de compuerta: AND
+- entradas: x, y
+
+El AST ayuda a que las siguientes fases no trabajen directamente con texto, sino
+con objetos organizados.
+
+
+7. ANALISIS SEMANTICO
+
+El analisis semantico revisa que el programa tenga sentido logico.
+
+En esta fase no basta con que el codigo este bien escrito. Tambien se verifica
+que las instrucciones sean coherentes.
+
+Las reglas principales son:
+
+1. Una senal debe existir antes de usarse.
+
+Ejemplo invalido:
+
+puerta A = AND(q, y);
+
+q no existe y no es una entrada externa permitida.
+
+2. No se pueden declarar puertas duplicadas.
+
+Ejemplo invalido:
+
+puerta A = AND(x, y);
+puerta A = OR(x, z);
+
+3. NOT debe recibir exactamente una entrada.
+
+Ejemplo invalido:
+
+puerta A = NOT(x, y);
+
+4. AND y OR deben recibir minimo dos entradas.
+
+Ejemplo invalido:
+
+puerta A = AND(x);
+
+5. No se puede conectar desde una senal inexistente.
+
+Ejemplo invalido:
+
+conectar q a salida;
+
+6. No se puede mostrar una senal inexistente.
+
+Ejemplo invalido:
+
+mostrar salida;
+
+si salida no fue declarada ni conectada antes.
+
+7. No se permiten conexiones circulares.
+
+Ejemplo invalido:
+
+conectar A a B;
+conectar B a A;
+
+Esto produce un ciclo: A -> B -> A.
+
+Para realizar estas validaciones, el compilador usa la clase SymbolTable. Esa
+tabla guarda las puertas, senales, entradas externas usadas y dependencias entre
+senales.
+
+
+8. CAPA INTERMEDIA IR/TAC
+
+Despues de validar el programa, el compilador genera una representacion
+intermedia llamada IR/TAC.
+
+Esta capa es importante porque separa el analisis del programa de la traduccion
+final a Python.
+
+El codigo fuente:
+
+puerta A = AND(x, y);
+puerta B = NOT(A);
+conectar B a salida;
+mostrar salida;
+
+se convierte en:
+
+A = AND x y
+B = NOT A
+salida = B
+PRINT salida
+
+Esta representacion es mas simple que el lenguaje original y mas facil de
+traducir a otro lenguaje.
+
+Gracias a la capa intermedia, el proyecto podria generar Python, JavaScript, C u
+otro lenguaje en el futuro sin cambiar toda la parte de analisis.
+
+
+9. GENERACION DE CODIGO PYTHON
+
+El generador de Python toma el IR/TAC y lo traduce a instrucciones Python.
+
+Por ejemplo:
+
+A = AND x y
+
+se convierte en:
+
+A = x and y
+
+Otro ejemplo:
+
+B = NOT A
+
+se convierte en:
+
+B = not A
+
+Y:
+
+PRINT salida
+
+se convierte en:
+
+print(salida)
+
+El archivo generado se guarda como:
+
+output_program.py
+
+Para el ejemplo principal, el Python generado es similar a:
+
+x, y = True, False
+A = x and y
+B = not A
+salida = B
+print(salida)
+
+
+10. EJECUCION DEL CODIGO GENERADO
+
+Despues de generar el codigo Python, el compilador puede ejecutarlo y capturar
+su salida.
+
+Con el ejemplo:
+
+x = True
+y = False
+
+La compuerta A calcula:
+
+A = x and y
+A = True and False
+A = False
+
+Luego B calcula:
+
+B = not A
+B = not False
+B = True
+
+Finalmente:
+
+salida = B
+print(salida)
+
+La salida final es:
+
+True
+
+
+11. ARCHIVO output.txt
+
+El archivo output.txt guarda el reporte completo de la compilacion.
+
+Cuando todo funciona, muestra las cinco fases como correctas:
+
+[1/5] Analisis lexico: OK
+[2/5] Analisis sintactico: OK
+[3/5] Analisis semantico: OK
+[4/5] Generacion IR/TAC: OK
+[5/5] Traduccion Python: OK
+
+Tambien muestra:
+
+- El IR/TAC generado.
+- El Python generado.
+- La salida de ejecucion.
+
+Esto permite explicar facilmente que hizo el compilador paso a paso.
+
+
+12. PRUEBAS AUTOMATICAS
+
+La carpeta tests contiene programas validos e invalidos.
+
+tests/valid
+tests/invalid
+
+Los casos validos deben compilar correctamente.
+Los casos invalidos deben producir errores esperados.
+
+Para ejecutar todas las pruebas:
+
+python main.py --run-tests
+
+El proyecto actualmente tiene:
+
+- 10 casos validos.
+- 10 casos invalidos.
+
+Cuando todo esta bien, el resumen esperado es:
+
+Resumen: 20/20 casos correctos.
+
+
+13. IMPORTANCIA DEL PROYECTO
+
+Este proyecto demuestra las fases principales de un compilador:
+
+- Analisis lexico.
+- Analisis sintactico.
+- Construccion de AST.
+- Analisis semantico.
+- Generacion de codigo intermedio.
+- Generacion de codigo destino.
+- Ejecucion y pruebas.
+
+Aunque el lenguaje es pequeno, el flujo es el mismo que usan compiladores mas
+grandes: primero se entiende el codigo, luego se valida, despues se transforma y
+finalmente se genera codigo ejecutable.
+
+La ventaja de este proyecto es que cada fase se puede observar claramente en los
+archivos del repositorio y en el reporte generado.
+
+
+14. RESUMEN FINAL
+
+El usuario escribe instrucciones de circuitos en input.txt.
+El compilador valida esas instrucciones con ANTLR y Python.
+Luego construye una representacion interna del programa.
+Despues revisa reglas semanticas como existencia de senales, cantidad correcta
+de entradas y ausencia de ciclos.
+Si todo es correcto, genera IR/TAC.
+Luego traduce ese IR/TAC a Python.
+Finalmente ejecuta el Python generado y muestra el resultado.
+
+En resumen, el proyecto convierte un lenguaje propio de circuitos digitales en
+un programa Python funcional.

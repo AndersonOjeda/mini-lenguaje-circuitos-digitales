@@ -21,11 +21,12 @@ Fases que debes mencionar:
 2. `antlr_driver.py`: usa ANTLR para crear tokens y parse tree.
 3. `ast_builder.py`: convierte el parse tree en AST propio.
 4. `semantic_analyzer/analyzer.py`: valida reglas del circuito.
-5. `codegen/ir_generator.py`: genera IR/TAC.
-6. `codegen/python_generator.py`: genera Python ejecutable.
-7. `compiler_pipeline.py`: une todas las fases.
-8. `main.py`: permite ejecutar el compilador desde consola.
-9. `tests/run_tests.py`: demuestra que casos validos e invalidos funcionan.
+5. `semantic_analyzer/symbol_table.py`: registra simbolos, externas usadas y dependencias.
+6. `codegen/ir_generator.py`: genera IR/TAC.
+7. `codegen/python_generator.py`: genera Python ejecutable.
+8. `compiler_pipeline.py`: une todas las fases.
+9. `main.py`: permite ejecutar el compilador desde consola.
+10. `tests/run_tests.py`: demuestra que casos validos e invalidos funcionan.
 
 ## Archivo por archivo
 
@@ -57,7 +58,13 @@ Que decir:
 
 Que decir:
 
-> Esta es una de las partes mas importantes. Aunque el programa este bien escrito sintacticamente, aqui verificamos si tiene sentido. Validamos compuertas duplicadas, entradas no declaradas, cantidad correcta de entradas para AND, OR y NOT, senales inexistentes al conectar o mostrar, y conexiones circulares usando DFS.
+> Esta es una de las partes mas importantes. Aunque el programa este bien escrito sintacticamente, aqui verificamos si tiene sentido. Validamos compuertas duplicadas, entradas no declaradas, cantidad correcta de entradas para AND, OR y NOT, senales inexistentes al conectar o mostrar, y conexiones circulares usando DFS. Para eso usamos una tabla de simbolos separada en `symbol_table.py`.
+
+### `semantic_analyzer/symbol_table.py`
+
+Que decir:
+
+> Este archivo implementa la tabla de simbolos del compilador. Guarda que senales existen, si vienen de una entrada externa, una compuerta o una conexion, que entradas externas se usaron y que dependencias hay entre senales.
 
 Detalle para explicar DFS:
 
